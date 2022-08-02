@@ -1,0 +1,326 @@
+---
+title: "STA 563 Final Project"
+author: 'Sheikh Arafat '
+date: "11/14/2021"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+#load the required libraries 
+library(MASS)
+library(zoo)
+library(lmtest)
+library(car)
+library(mctest)
+library(leaps)
+library(nortest)
+```
+
+
+### Maternal Determinants of Birth Weight in the US: An Application of Multiple Regression 
+#### Introduction
+**As the time and technology progress, people realized that birth weight is actually a important factor for new born babies mortality. In 2015, within 20.5 millon newborns, approximately 14.6% of all babies globally suffer from low weight. And low birth weight is a sign of intrauterine malnutrition. There are different factors which can affect the birth weights. These different factor include but not limited to: 1. Psychological stress, 2. Social disadvantage, 3. Consumption of alcohol and cigarette, 4. Environmental factors and 5. Maternal factors.**
+**In this project, our goal is to identify important maternal factors which affect birth weight positively or negatively via methods of multiple linear regression.**
+
+```{r}
+
+#read the final data set
+data_f<-read.csv("C:\\Users\\sheik\\OneDrive\\Desktop\\Regression_Multiple\\births_75.csv")
+```
+
+
+
+```{r}
+#check the summary of the data
+summary(data_f)
+
+#check the catagories of the qualitative variable
+table(data_f$Cigarette)
+
+#pairs scatter plots
+pairs(data_f[,c(1:4,6)],main='Pairwise Plot for Births Data Set')
+```
+
+We have sketched a pairwise plot for the births data set and tried to detect the possible association within the variables. We have observed that almost all the variables are showing a scatter pattern instead of any specific pattern except the Mother’s BMI and Mother’s Prepregnancy Weight. Figure 1 exhibits a positive association between these two predictors.
+
+
+```{r}
+#cleanning the outliers of the data
+
+#check whether outlier exist or not
+boxplot(data_f$BirthWeight,main='Box-plot of Birth Weight',ylab='weight (in grams)',xlab='Birth Weight')
+
+
+
+#calculate the IQR
+idq_bw<-IQR(data_f$BirthWeight)
+
+#Calculate the quartiles
+Q1 <- quantile(data_f$BirthWeight, probs=c(.25, .75), na.rm = FALSE)
+
+#final data set without outliers
+data_f1<- subset(data_f, data_f$BirthWeight > (Q1[1] - 1.5*idq_bw) & data_f$BirthWeight < (Q1[2]+1.5*idq_bw))
+
+#boxplot of the outlier removed data set
+boxplot(data_f1$BirthWeight,main='Box-plot of Birth Weight',ylab='weight (in grams)',xlab='Birth Weight')
+```
+
+To check whether the data set has any outliers or not. We have created a box-plot of the response variable and observed that a lot of outliers exist in the data set (Ref. Figure 2). The values of birth weight which are below and above the 1.5IQR of the first and third quartile respectively are removed from the data set.
+
+After preparing the data set, we fit the multiple regression model. We have a qualitative predictor variable with three categories and introduce two dummy or indicator variables in our model. We define the dummy or indicator variables as follows:
+The indivator Variable in our project is:
+$Ciagerette_Y$ : whether the number smoke before or during the pregnncy.
+
+```{r}
+
+#fit the regression model
+
+#factor the categorical variable type
+data_f1$Cigarette.f<-factor(data_f1$Cigarette)
+
+#fit the model
+model_fit1<-lm(BirthWeight~ MotherAge+MotherBMI+MotherPrePWeight+WeightGain+Cigarette.f,data=data_f1)
+
+#check the summary of the fitted model
+summary(model_fit1)
+
+```
+
+In this case, the smoking status No is the baseline level. Let <br>
+ $BirthWeight_1 = Y_1$ <br>
+ $MotherAge_i = X_1i$ <br>
+ $MotherBMI_i = X_2i$, <br> 
+ $MotherPreWeight_i = X_3i$ <br>
+ $WeightGain_i = X_4i$ <br>
+ Indicator Variable: 
+ $Cigarette_Y = X_5i$ <br>
+Now the model will look like: <br>
+   $Y_i = \beta_0+\beta_1X_1i+\beta_2X_2i + \beta_3X_3i + \beta_4X_4i +\beta_5Cigarrette_Ui+\epsilon_i$ <br>
+Our fitted model is following: <br>
+   $Y_i = 3028.83 + 4.51X_2i - 0.55X_3i + 3.99X_4i - 300Cigarrette_Ui + 195.31Cigarette_Y$ <br>
+With this model, we actually have three different models. Table 1. contains the considered and fitted models
+
+For Equations in Table 1 of Report<br>
+When $Cigarette_U$: <br>
+$Y_i = \beta_0 + \beta_5 + \beta_1X_1i + \beta_2X_2i + \beta_3X_3i + \beta_4X_4i + \epsilon_i$ <br>
+$\hat{Y_i} = 2728.83 + 4.21X_1i + 4.51X_2i - 0.55X_3i + 3.99X_4i$ <br>
+
+When $Cigarette_Y$: <br>
+$Y_i = \beta_0 + \beta_6 + \beta_1X_1i + \beta_2X_2i + \beta_3X_3i + \beta_4X_4i + \epsilon_i$ <br>
+$\hat{Y_i} = 2833.52 + 4.21X_1i + 4.51X_2i - 0.55X_3i + 3.99X_4i$ <br
+
+When $Cigarette_N$: <br>
+$Y_i = \beta_0  + \beta_1X_1i + \beta_2X_2i + \beta_3X_3i + \beta_4X_4i + \epsilon_i$ <br>
+$\hat{Y_i} = 3028.83 + 4.21X_1i + 4.51X_2i - 0.55X_3i + 3.99X_4i$ <br>
+ 
+
+
+The interpretation of these fitted parameters are
+ $\hat{\beta_0} = 3028.83$, is the true mean birth weight of a mother’s baby whose smoking status is no when all the other predictor variables equal zero (this is out of the scope of the model). <br>
+ $\hat{\beta_1} = 4.21$, is the change in the true mean birth weight as the Mother Age increases by 1 year, regardless of the mother’s smoking status. <br>
+ $\hat{\beta_2} = 4.51$, is the change in the true mean birth weight as the Mother BMI increases by 1 unit, regardless of the mother’s smoking status. <br> 
+ $\hat{\beta_3} = −0.55$, is the change in the true mean birth weight as the Mother Pre-pregnancy Weight increases by 1 year, regardless of the mother’s smoking status. <br>
+ $\hat{\beta_4} = 3.99$, is the change in the true mean birth weight as the Mother Weight Gain during pregnancy increases by 1 year, regardless of the mother’s smoking status. <br>
+ $\hat{\beta_5} = −300$, is the change in the true mean birth weight of a mother’s baby whose smoking status is unknown relative to a mother’s baby whose smoking status is no when all the other predictor variables equals zero. <br>
+ $\hat{\beta_6} = −195.31$, is the change in the true mean birth weight of a mother’s baby whose smoking status is yes relative to a mother’s baby whose smoking status is no when all the other predictor variables equals zero. <br>
+ $\hat{\beta_0} + \hat{\beta_5} = 2728.83$, is the true mean birth weight of a mother’s baby whose smoking status is unknown when all the other predictor variables equal zero (this is out of the scope of the model). <br>
+ $\hat{\beta_0} + \hat{\beta_6} = 2833.52$, is the true mean birth weight of a mother’s baby whose smoking status is yes when all the other predictor variables equal zero (this is out of the scope of the model). <br>
+
+
+```{r}
+
+#performing the ANOVA
+anova(model_fit1)
+
+#CI of the coefficients
+confint(model_fit1)
+```
+Now, to check the usefulness of the model, we have performed the F-test, where we set the
+hypothesis as
+ $H_0:\beta_1=\beta_2=\beta_3=\beta_4=\beta_5=\beta_6=0$ <br>
+ $H_1$:At least one $\beta_i$≠0, i = 1, 2,...6 <br>
+
+The calculated value of the test statistic is 37.82 on 6 and 7231 degrees of freedom with a p-value of $2.26 × 10−16$. As the p-value is less than any usual level of significance, we have rejected the null hypothesis which implies that the fitted model is useful to estimate the birth weight. After that, we have performed the individual t-test to check the significance of the individual predictors of the fitted model. Similarly, with the F-test, we have observed that all the p-values of the individual ttest provide smaller p-values than the usual level of significance. In addition to this, none of the 95% confidence intervals of the regression coefficients include zero which also implies that the regression coefficients values are different than zero. So, we can conclude that all the considered predictors of the fitted model are significant and required to model the birth weight. Though the fitted model is significant and all the considered predictors are useful, the multiple R-squared of the fitted model is 0.0304. This implies that 3.04% of the total variations in the response variable birth weight are explained by the linear relationship of the considered predictors. The birth weight is not only dependent on the maternal factors but also the social, psychological, demographic, and environmental factors that play a vital role in modeling birth weight. Due to this reason, we are observing low multiple R-squared values.
+
+As our fitted model and all the considered predictors are significant, so now we will perform the model diagnostics. 
+
+```{r}
+#checking the assumptions of the regression model
+
+#drawing all graphs together
+par(mfrow=c(1,4))
+plot(model_fit1,cex=0.9)
+mtext("Model Diagnostics", side = 1, line = -24, outer = TRUE)
+```
+```{r}
+#	Linearity assumption
+
+#checking Linearity assumption by Residual vs Fitted
+plot(model_fit1,which=1)
+```
+
+Linearity assumption: For checking the linearity assumption of the residuals we have plotted the “Residuals vs Fitted” and observed that the residuals are bouncing randomly around the $e_i = 0$ line, resulting in a roughly flat (horizontal) smoother (dot trend line) (Ref. Figure 3). So, we can conclude that the residuals of the fitted models satisfy the linearity assumption.
+
+```{r}
+
+#Independence assumption checking by residuals sequence plot
+plot(model_fit1$residuals,main ="Residuals Sequence Plot",xlab = "No. of Residuals",ylab = "Residuals")
+```
+
+Independence assumption: We have taken the samples randomly which implies that there is no dependence. In addition to this, We have created the “Residuals Sequence Plot” for checking the independence assumption of the residuals. In that graph, we didn’t observe any pattern (Ref. Figure 4). As a consequence, we can conclude that the residuals of the fitted models are independent.
+
+```{r}
+#constant variance assumption
+
+plot(model_fit1, which=3)
+# Breusch- Pagan Test for constant variance
+bptest(model_fit1)
+```
+
+Constant Variance assumption: For checking the Constant variance assumption, we have plotted the square root of standardized residuals versus the fitted values. We have observed that the variance in the middle is much smaller than the variance in the right end (Ref. Figure 3). Whereas the condition of the constant variance is the variance should exhibit a horizontal flat line instead of a decreasing or increasing trend. Here, we can suspect that the variance is not constant. So, we are performing a numerical test called the “Breusch- Pagan Test” for verifying our suspect.
+The hypothesis of this test is:
+$H_0$:The variance of errors is constant. <br>
+$H_1$:The variance of errors is NOT constant. <br>
+The value of the test statistic is BP=47.276 with a p-value of $1.65 × 10^8$ As the p-value is less than the usual level of significance which is 0.05. Therefore, we are rejecting the null hypothesis. So, we can conclude that the variance of errors is not constant which is similar to our graphical findings.
+
+
+
+
+```{r}
+# Normality assumption by Q-Q Plot
+
+plot(model_fit1, which=2) #normal Q-Q Plot
+#AD test for normality
+ad.test(model_fit1$residuals)
+```
+
+Normality assumption: For checking the normality assumption of the residuals, we have created the “Normal Q-Q” plot and we have observed a noticeable skew in the points at the top and bottom of the “Normal Q-Q” plot (Ref. Figure 3). So, we can suspect that the residuals aren’t normally distributed. We didn’t perform the “Shapiro-Wilk normality test” because this test has some limitations on sample size. We can only apply this test when the sample size is between 3 and 5000. However, in our case, we have 7500 samples.
+
+```{r}
+# unusual observations
+
+plot(model_fit1, which=5)
+abline(h=3,col="green") #Outliers
+```
+
+Unusual observations: From the residual vs leverage plot, we can find that most of the observed values are vertically distributed where leverage equals 0 and 0.01. Among them, the observed values 4931, 6704, 5965 are far from the fitted Line and Standardized residuals, but no point does not fall beyond the dotted line (Cook's distance) (Ref. Figure 3). This means that there are no points of influence in our regression model. Even though there are many points that are very close to Standardized Residuals equals 3, there is no point greater than 3, so there is no high leverage point.
+
+
+As we have seen that the model has non-constant variance and the residuals aren’t also normally distributed. We will perform the box-cox transformation to improve the models’ behavior. 
+
+The box-cox transformation is strictly designed for a positive response (Y>0). As our response variable is “Birth Weight” which contains all the positive values so that we can apply the box-cox transformation for finding the best fit to the data
+```{r}
+#performing the box-cox transformation
+
+bc<-boxcox(model_fit1)
+bc$x[which.max(bc$y)]
+```
+
+In the Box-Cox method, instead of fitting the original Y as the response, we determine a transformed version. For getting the best 𝜆 estimate, we calculate the log-likelihood of the data that makes the log-likelihood maximum. Here, we have found that for 𝜆 = 1.15, we will get the maximum log-likelihood (Ref. Figure 5). We have to consider the nearest value to the optimum and which is 1. So, the box-cox transformation isn’t also providing a better result for this case. 
+
+
+```{r}
+#fit the transformed model
+model_fit2<-lm((BirthWeight^2)~ MotherAge+MotherBMI+MotherPrePWeight+WeightGain+Cigarette.f,data=data_f1)
+
+#summary of the transformed model
+summary(model_fit2)
+#ANOVA of the transformed model
+anova(model_fit2)
+```
+
+
+```{r, fig.align='center', fig.width=6}
+#checking the assumptions of the transformed regression model
+
+#drawing all graphs together
+par(mfrow=c(1,4))
+plot(model_fit2,cex=0.9)
+mtext("Transformed Model Diagnostics", side = 1, line = -24, outer = TRUE)
+
+
+## checking whether log transformation is applicable or not
+
+# histogram of the response variable
+x <- data_f1$BirthWeight
+h<-hist(x,xlab="Birth Weight",
+        main="Histogram of Birth Weight with Normal Curve")
+xfit<-seq(min(x),max(x),length=40)
+yfit<-dnorm(xfit,mean=mean(x),sd=sd(x))
+yfit <- yfit*diff(h$mids[1:2])*length(x)
+lines(xfit, yfit, col="blue", lwd=2)
+```
+The histogram of the birth weight shows that the distribution is almost normally distributed so the log transformation will not be an effective one. As a consequence, instead of using the considered assumptions, we will use the original model.
+
+
+```{r}
+# Fit the best model 
+
+# Stepwise regression model by AIC
+step.model <- stepAIC(lm(BirthWeight ~  MotherAge+MotherBMI+MotherPrePWeight+WeightGain+Cigarette.f, data = data_f1), direction = "both", k=2)
+
+# Stepwise regression model by BIC
+n<-length(data_f$BirthWeight)
+step.model2 <- stepAIC(lm(BirthWeight ~ MotherAge+MotherBMI+MotherPrePWeight+WeightGain+Cigarette.f, data = data_f1), direction = "both", k=log(n))
+
+#checking multicolieanirity
+
+omcdiag(model_fit1)
+imcdiag(model_fit1)
+
+#calculating VIF
+vif(model_fit1)
+```
+
+We have performed the stepwise regression method by considering the forward and backward selection process. We have got the full model as the best model with the AIC of 89318.73 and BIC of 89367.19. As we have seen from the pairwise plot that there is a possible association between the Mother BMI and Mother Pre-Pregnancy Weight, so we have performed the multicollinearity test. The multicollinearity is detected by the Farrar Chi-Square test and Theil's Method. Therefore, to determine the degree of multicollinearity, we have estimated the variance inflation factor (VIF) and observed that for almost all the predictors the VIF is very close to 1 except Mother BMI and Mother Pre-Pregnancy Weight. The Mother Pre-Pregnancy Weight has the highest VIF which is 6.53.
+
+As a consequence, we will remove this predictor from the model and perform the partial F test to check the performance of the reduced model without the Mother Pre-Pregnancy Weight. We set the hypothesis as
+ $H_0: \beta_3 = 0$(Reduced Model is Prefered) <br>
+ $H_1: \beta_3 ≠ 0$(Ful Model is Prefered) <br>
+Where,
+  Full Model:$Y_i = \beta_0+\beta_1X_1i+\beta_2X_2i + \beta_3X_3i + \beta_4X_4i + \beta_5Cigarrette_Ui + \beta_6Cigarette_Yi + \epsilon_i$ <br>
+  Reduced Model:$Y_i = \beta_0+\beta_1X_1i+\beta_2X_2i + \beta_4X_4i + \beta_5Cigarrette_Ui + \beta_6Cigarette_Yi + \epsilon_i$ <br>
+
+```{r}
+########## partial F test
+
+#Fit a model without Mother Pre Pregnency Weight
+
+model_fit4<-lm(BirthWeight~ MotherAge+MotherBMI+WeightGain+Cigarette.f,data=data_f1)
+summary(model_fit4)
+
+#partial F test
+anova(model_fit4,model_fit1)
+```
+
+The calculated value of the partial test statistic is 17.76 with 1 degree of freedom and the p-value is $2.54 × 10^{-5}$.As the p-value is less than the level of significance, so we will reject the null hypothesis which implies that the full model with all the predictors will be a better fit for the data rather than that the reduced model without the Mother Pre-Pregnancy Weight.
+
+As we have five significant predictor variables in our model, as a consequence the interaction model will increase complexity and will violate the requirement of a parsimonious model. However, we have performed the stepwise regression model with all the interaction terms and tried to find out the best model. We have observed that the model with interaction term contains more than 20 regression coefficients with an adjusted R-square of 0.06. Though the adjusted Rsquare is quite larger than the without interaction model, the model is no longer parsimonious. Finally, we have decided to use the model without the interaction terms.
+
+
+```{r}
+##fitting interaction model
+
+full.model <- lm(BirthWeight ~.+MotherAge*MotherBMI*MotherPrePWeight*WeightGain*Cigarette.f, data = data_f1)
+
+#find best interaction model
+
+#step-wise regression by AIC
+step.model3<-stepAIC(full.model,direction = "both", k=2)
+#step-wise regression by BIC
+step.model4<-stepAIC(full.model,direction = "both", k=log(n))
+```
+
+#### Conclusion
+**Finally, from the analysis results, we can see that all predictors that we already choosed are significant during the linear regression analysis process. We can see that mother's hieght and weight has effect on newborn baby birth weight, and weight gain is exceptional importantly related to newborn baby birth weight. And cigarrete is sure having negative effect on newborn babies birthweight. We can conclude that, mother's hieght and weight can affect birth weight, but mother's weight gain and whether or not smoke cigarrete are vitally important on nultrition gain of baby and will be reflected on difference of birth weight.**
+
+
+
+
+
+
+
+
